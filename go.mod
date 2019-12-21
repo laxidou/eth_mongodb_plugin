@@ -1,4 +1,4 @@
-module eth-data
+module eth_mongodb_plugin
 
 go 1.13
 

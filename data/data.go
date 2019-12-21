@@ -63,23 +63,16 @@ type Txdata struct {
 	Hash string				"bson:`hash`"
 }
 
-
-
 type MobileClient struct {
 	cli *geth.EthereumClient
+	ip string
 }
 
 // NewEthereumClient connects a client to the given URL.
 func NewEthMobile(ethIp string) (c *MobileClient, _ error) {
 	cli, err := geth.NewEthereumClient(ethIp)
-	return &MobileClient{cli}, err
-	//client, err := ethclient.Dial(ethIp)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//return &MobileClient{client}, err
+	return &MobileClient{cli,ethIp}, err
 }
-
 
 //获取区块信息
 func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) {
@@ -88,49 +81,65 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) 
 	if err != nil {
 		fmt.Println(err)
 	}
-
 	//获取区块头信息
 	h := b.GetHeader()
-	headerJson, _ := h.EncodeJSON()
+	blockInfo, err := getHeader(h)
 	//获取叔块
 	uncle := b.GetUncles()
-	totalNucle :=uncle.Size()
+	uncles, totalNucle, err :=getUncleBlock(uncle)
+	//获取交易记录
+	txs := b.GetTransactions()
+	transactions, totalTxs, err:= getTransactions(txs)
+	////完善区块数据
+	blockInfo.TotalTxs = totalTxs
+	blockInfo.Transactions = *transactions
+	blockInfo.TotalNucles = totalNucle
+	blockInfo.Uncles = *uncles
+	return blockInfo, nil
+}
+
+//获取叔块
+func getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle int, err error) {
+	totalNucle =uncle.Size()
 	var uncles []UncleBlock
 	for i := 0; i < totalNucle; i++{
 		un, _ := uncle.Get(i)
 		unRes, _ :=un.EncodeJSON()
 		var uncleHeader map[string]interface{}
 		if err := json.Unmarshal([]byte(unRes), &uncleHeader); err != nil{
-			return nil, err
+			return nil, totalNucle, err
 		}
 		uncleHeader["gasLimit"], _ = math.ParseUint64(uncleHeader["gasLimit"].(string))
 		uncleHeader["gasUsed"], _ = math.ParseUint64(uncleHeader["gasUsed"].(string))
 		uncleHeader["number"], _ = math.ParseUint64(uncleHeader["number"].(string))
 		var uncleInfo UncleBlock
 		if err := mapstructure.Decode(uncleHeader, &uncleInfo); err != nil{
-			return nil, err
+			return nil, totalNucle, err
 		}
 		uncles = append(uncles, uncleInfo)
 	}
+	return &uncles, totalNucle, nil
+}
 
-	//获取交易记录
-	txs := b.GetTransactions()
+//获取交易记录
+func getTransactions(txs *geth.Transactions) (txsInfo *[]Txdata, totalTxs int, err error) {
 	fmt.Println("total transactions:",txs.Size())
-	totalTxs := txs.Size()
+	totalTxs = txs.Size()
 	var transactions []Txdata
 	for i := 0; i < totalTxs; i++{
-		var txdata Txdata
+		var txData Txdata
 		tx, _ := txs.Get(i)
-
-
-		tx_res, _ :=tx.EncodeJSON()
-		//fmt.Println(tx_res)
-		if err := json.Unmarshal([]byte(tx_res), &txdata); err != nil{
-			return nil, err
+		txRes, _ :=tx.EncodeJSON()
+		if err := json.Unmarshal([]byte(txRes), &txData); err != nil{
+			return nil, totalTxs, err
 		}
-		transactions = append(transactions, txdata)
+		transactions = append(transactions, txData)
 	}
+	return &transactions, totalTxs, nil
+}
 
+func getHeader(h *geth.Header) (block *BlockInfo, err error) {
+	headerJson, _ := h.EncodeJSON()
 	//类型转换
 	var header map[string]interface{}
 	if err := json.Unmarshal([]byte(headerJson), &header); err != nil{
@@ -139,16 +148,9 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) 
 	header["gasLimit"], _ = math.ParseUint64(header["gasLimit"].(string))
 	header["gasUsed"], _ = math.ParseUint64(header["gasUsed"].(string))
 	header["number"], _ = math.ParseUint64(header["number"].(string))
-
-	////完善区块数据
 	var blockInfo BlockInfo
 	if err := mapstructure.Decode(header, &blockInfo); err != nil{
 		return nil, err
 	}
-	blockInfo.TotalTxs = totalTxs
-	blockInfo.Transactions = transactions
-	blockInfo.TotalNucles = totalNucle
-	blockInfo.Uncles = uncles
 	return &blockInfo, nil
 }
-
