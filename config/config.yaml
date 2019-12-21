@@ -1,0 +1,14 @@
+name: demo
+database:
+  mongodb:
+    db: eth
+    host: 192.168.1.100
+    port: !!str 27017
+localETH:
+  host: 192.168.1.100
+  port: !!str 8080
+ETH:
+  host: 47.244.53.77
+  port: !!str 8545
+NewETH:
+  host: https://mainnet.infura.io
