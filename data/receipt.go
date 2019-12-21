@@ -1,12 +1,12 @@
 package data
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
-	"context"
 	"strconv"
 )
 
@@ -66,7 +66,7 @@ type EthClient struct {
 }
 
 // NewEthereumClient connects a client to the given URL.
-func NewEthClient(ethIp string) (c *EthClient, _ error) {
+func newEthClient(ethIp string) (c *EthClient, _ error) {
 	client, err := ethclient.Dial(ethIp)
 	if err != nil {
 		log.Fatal(err)
@@ -75,12 +75,11 @@ func NewEthClient(ethIp string) (c *EthClient, _ error) {
 }
 
 //获取Logs
-func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptStr string)  {
+func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptInfo string)  {
 	r, err := c.cli.TransactionReceipt(context.Background(), common.HexToHash(hashHex))
 	if err!= nil {
 		fmt.Println(err)
 	}
-
 	var enc ReceiptInfo
 	enc.PostState = common.BytesToHash(r.PostState).String()
 	enc.Status = r.Status
@@ -113,5 +112,9 @@ func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptStr string)  {
 	}
 	enc.Logs = logs
 	receiptJson, err := json.Marshal(enc)
+
+	//if err := json.Unmarshal([]byte(string(receiptJson)), &enc); err != nil{
+	//	//return nil
+	//}
 	return string(receiptJson)
 }

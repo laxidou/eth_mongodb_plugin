@@ -75,7 +75,7 @@ func NewEthMobile(ethIp string) (c *MobileClient, _ error) {
 }
 
 //获取区块信息
-func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) {
+func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, repsArr *[]string, err error) {
 	eth_ctx := geth.NewContext()
 	b, err := m.cli.GetBlockByNumber(eth_ctx, blockNumber)
 	if err != nil {
@@ -89,13 +89,21 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) 
 	uncles, totalNucle, err :=getUncleBlock(uncle)
 	//获取交易记录
 	txs := b.GetTransactions()
-	transactions, totalTxs, err:= getTransactions(txs)
+	transactions, totalTxs, receipts, err:= getTransactions(txs)
+
 	////完善区块数据
 	blockInfo.TotalTxs = totalTxs
 	blockInfo.Transactions = *transactions
 	blockInfo.TotalNucles = totalNucle
 	blockInfo.Uncles = *uncles
-	return blockInfo, nil
+	fmt.Println(*receipts)
+	ethCli, _ := newEthClient(m.ip)
+	var receiptsArr []string
+	for _, repHash := range *receipts{
+		receiptsInfo := ethCli.GetReceiptByTxHash(repHash)
+		receiptsArr = append(receiptsArr, receiptsInfo)
+	}
+	return blockInfo, &receiptsArr, nil
 }
 
 //获取叔块
@@ -122,20 +130,22 @@ func getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle in
 }
 
 //获取交易记录
-func getTransactions(txs *geth.Transactions) (txsInfo *[]Txdata, totalTxs int, err error) {
+func getTransactions(txs *geth.Transactions) (txsInfo *[]Txdata, totalTxs int, receiapts *[]string, err error) {
 	fmt.Println("total transactions:",txs.Size())
 	totalTxs = txs.Size()
+	var receiptArr []string
 	var transactions []Txdata
 	for i := 0; i < totalTxs; i++{
 		var txData Txdata
 		tx, _ := txs.Get(i)
 		txRes, _ :=tx.EncodeJSON()
 		if err := json.Unmarshal([]byte(txRes), &txData); err != nil{
-			return nil, totalTxs, err
+			return nil, totalTxs, nil,err
 		}
 		transactions = append(transactions, txData)
+		receiptArr = append(receiptArr, tx.GetHash().GetHex())
 	}
-	return &transactions, totalTxs, nil
+	return &transactions, totalTxs, &receiptArr,nil
 }
 
 func getHeader(h *geth.Header) (block *BlockInfo, err error) {
