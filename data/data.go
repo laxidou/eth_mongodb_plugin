@@ -26,9 +26,10 @@ type BlockInfo struct {
 	Nonce string            "bson:`nonce`"
 	Hash string             "bson:`hash`"
 	TotalTxs int			"bson:`totalTxs`"
-	TotalNucles int          "bson:`totalNucle`"
-	Uncles []UncleBlock
-	Transactions []Txdata
+	TotalUncles int         "bson:`totalUncle`"
+	Uncles []UncleBlock		"json:`group,omitempty` bson:`totalUncle`"
+	Transactions []TxData	"json:`group,omitempty` bson:`transactions`"
+	Receipts []ReceiptInfo  "json:`group,omitempty` bson:`receipts`"
 }
 
 type UncleBlock struct {
@@ -50,7 +51,7 @@ type UncleBlock struct {
 	Hash string             "bson:`hash`"
 }
 
-type Txdata struct {
+type TxData struct {
 	Nonce string			"bson:`nonce`"
 	GasPrice string			"bson:`gasPrice`"
 	Gas string				"bson:`gas`"
@@ -75,9 +76,9 @@ func NewEthMobile(ethIp string) (c *MobileClient, _ error) {
 }
 
 //获取区块信息
-func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, repsArr *[]string, err error) {
-	eth_ctx := geth.NewContext()
-	b, err := m.cli.GetBlockByNumber(eth_ctx, blockNumber)
+func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) {
+	ethCtx := geth.NewContext()
+	b, err := m.cli.GetBlockByNumber(ethCtx, blockNumber)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -86,7 +87,7 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, repsArr *[]
 	blockInfo, err := getHeader(h)
 	//获取叔块
 	uncle := b.GetUncles()
-	uncles, totalNucle, err :=getUncleBlock(uncle)
+	uncles, totalUncle, err :=getUncleBlock(uncle)
 	//获取交易记录
 	txs := b.GetTransactions()
 	transactions, totalTxs, receipts, err:= getTransactions(txs)
@@ -94,22 +95,22 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, repsArr *[]
 	////完善区块数据
 	blockInfo.TotalTxs = totalTxs
 	blockInfo.Transactions = *transactions
-	blockInfo.TotalNucles = totalNucle
+	blockInfo.TotalUncles = totalUncle
 	blockInfo.Uncles = *uncles
-	fmt.Println(*receipts)
 	ethCli, _ := newEthClient(m.ip)
-	var receiptsArr []string
+	var receiptsArr = make([]ReceiptInfo, 0)
 	for _, repHash := range *receipts{
 		receiptsInfo := ethCli.GetReceiptByTxHash(repHash)
-		receiptsArr = append(receiptsArr, receiptsInfo)
+		receiptsArr = append(receiptsArr, *receiptsInfo)
 	}
-	return blockInfo, &receiptsArr, nil
+	blockInfo.Receipts = receiptsArr
+	return blockInfo, nil
 }
 
 //获取叔块
 func getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle int, err error) {
 	totalNucle =uncle.Size()
-	var uncles []UncleBlock
+	var uncles =make([]UncleBlock, 0)
 	for i := 0; i < totalNucle; i++{
 		un, _ := uncle.Get(i)
 		unRes, _ :=un.EncodeJSON()
@@ -130,18 +131,19 @@ func getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle in
 }
 
 //获取交易记录
-func getTransactions(txs *geth.Transactions) (txsInfo *[]Txdata, totalTxs int, receiapts *[]string, err error) {
+func getTransactions(txs *geth.Transactions) (txsInfo *[]TxData, totalTxs int, receiapts *[]string, err error) {
 	fmt.Println("total transactions:",txs.Size())
 	totalTxs = txs.Size()
 	var receiptArr []string
-	var transactions []Txdata
+	var transactions = make([]TxData, 0)
 	for i := 0; i < totalTxs; i++{
-		var txData Txdata
+		var txData TxData
 		tx, _ := txs.Get(i)
 		txRes, _ :=tx.EncodeJSON()
 		if err := json.Unmarshal([]byte(txRes), &txData); err != nil{
 			return nil, totalTxs, nil,err
 		}
+		fmt.Println(txData)
 		transactions = append(transactions, txData)
 		receiptArr = append(receiptArr, tx.GetHash().GetHex())
 	}

@@ -2,7 +2,6 @@ package data
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -17,7 +16,7 @@ type ReceiptInfo struct {
 	Status            uint64 "bson:`status`"
 	CumulativeGasUsed uint64 "bson:`cumulativeGasUsed`"
 	Bloom             string "bson:`logsBloom`"
-	Logs              []LogInfo
+	Logs              []LogInfo "bson:`logs`"
 
 	// Implementation fields: These fields are added by geth when processing a transaction.
 	// They are stored in the chain database.
@@ -75,7 +74,7 @@ func newEthClient(ethIp string) (c *EthClient, _ error) {
 }
 
 //获取Logs
-func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptInfo string)  {
+func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptInfo *ReceiptInfo)  {
 	r, err := c.cli.TransactionReceipt(context.Background(), common.HexToHash(hashHex))
 	if err!= nil {
 		fmt.Println(err)
@@ -92,7 +91,7 @@ func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptInfo string)  {
 	enc.BlockHash = r.BlockHash.String()
 	enc.BlockNumber, _ = strconv.ParseInt(r.BlockNumber.String(), 10, 64)
 	enc.TransactionIndex = r.TransactionIndex
-	var logs []LogInfo
+	var logs = make([]LogInfo, 0)
 	for i := 0; i < len(r.Logs) ; i++ {
 		var logInfo LogInfo
 		l := r.Logs[i]
@@ -103,7 +102,7 @@ func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptInfo string)  {
 		logInfo.Index = l.Index
 		logInfo.TxIndex = l.TxIndex
 		logInfo.Removed = l.Removed
-		var topicArr []string
+		var topicArr = make([]string, 0)
 		for k := 0; k<len(l.Topics) ; k++ {
 			topicArr = append(topicArr, l.Topics[k].String())
 		}
@@ -111,10 +110,93 @@ func (c *EthClient)GetReceiptByTxHash(hashHex string) (receiptInfo string)  {
 		logs = append(logs, logInfo)
 	}
 	enc.Logs = logs
-	receiptJson, err := json.Marshal(enc)
-
-	//if err := json.Unmarshal([]byte(string(receiptJson)), &enc); err != nil{
-	//	//return nil
-	//}
-	return string(receiptJson)
+	return &enc
 }
+
+//func (this ReceiptInfo) MarshalJSON() ([]byte, error) {
+//	return json.Marshal(map[string]interface{}{
+//		"PostState": this.PostState,
+//		"Status": this.Status,
+//		"CumulativeGasUsed": this.CumulativeGasUsed,
+//		"Bloom": this.Bloom,
+//		"Logs": this.Logs,
+//		"TxHash": this.TxHash,
+//		"ContractAddress": this.ContractAddress,
+//		"GasUsed": this.GasUsed,
+//		"BlockHash": this.BlockHash,
+//		"BlockNumber": this.BlockNumber,
+//		"TransactionIndex": this.TransactionIndex,
+//	})
+//}
+
+//func (this ReceiptInfo) MarshalJSON() ([]byte, error) {
+//	type ReceiptInfo struct {
+//		// Consensus fields: These fields are defined by the Yellow Paper
+//		PostState         string "bson:`root`"
+//		Status            uint64 "bson:`status`"
+//		CumulativeGasUsed uint64 "bson:`cumulativeGasUsed`"
+//		Bloom             string "bson:`logsBloom`"
+//		Logs              []LogInfo
+//
+//		// Implementation fields: These fields are added by geth when processing a transaction.
+//		// They are stored in the chain database.
+//		TxHash          string "bson:`transactionHash`"
+//		ContractAddress string "bson:`contractAddress`"
+//		GasUsed         uint64 "bson:`gasUsed`"
+//
+//		// Inclusion information: These fields provide information about the inclusion of the
+//		// transaction corresponding to this receipt.
+//		BlockHash        string "bson:`blockHash`"
+//		BlockNumber      int64 "bson:`blockNumber`"
+//		TransactionIndex uint "bson:`transactionIndex`"
+//	}
+//	return json.Marshal(map[string]interface{}{
+//		"PostState": this.PostState,
+//		"Status": this.Status,
+//		"CumulativeGasUsed": this.CumulativeGasUsed,
+//		"Bloom": this.Bloom,
+//		"Logs": this.Logs,
+//		"TxHash": this.TxHash,
+//		"ContractAddress": this.ContractAddress,
+//		"GasUsed": this.GasUsed,
+//		"BlockHash": this.BlockHash,
+//		"BlockNumber": this.BlockNumber,
+//		"TransactionIndex": this.TransactionIndex,
+//	})
+//}
+
+//func (re ReceiptInfo)MarshalJSON(r *types.Receipt) ([]byte, error) {
+//	type ReceiptInfo struct {
+//		// Consensus fields: These fields are defined by the Yellow Paper
+//		PostState         string `json:"root"`
+//		Status            uint64 `json:"status"`
+//		CumulativeGasUsed uint64 `json:"cumulativeGasUsed" gencodec:"required"`
+//		Bloom             string `json:"logsBloom"         gencodec:"required"`
+//		Logs              []LogInfo `json:"logs"              gencodec:"required"`
+//
+//		// Implementation fields: These fields are added by geth when processing a transaction.
+//		// They are stored in the chain database.
+//		TxHash          string `json:"transactionHash" gencodec:"required"`
+//		ContractAddress string `json:"contractAddress"`
+//		GasUsed         uint64 `json:"gasUsed" gencodec:"required"`
+//
+//		// Inclusion information: These fields provide information about the inclusion of the
+//		// transaction corresponding to this receipt.
+//		BlockHash        string `json:"blockHash,omitempty"`
+//		BlockNumber      int64 `json:"blockNumber,omitempty"`
+//		TransactionIndex uint `json:"transactionIndex"`
+//	}
+//	var enc ReceiptInfo
+//	enc.PostState = r.PostState
+//	enc.Status = hexutil.Uint64(r.Status)
+//	enc.CumulativeGasUsed = hexutil.Uint64(r.CumulativeGasUsed)
+//	enc.Bloom = r.Bloom
+//	enc.Logs = r.Logs
+//	enc.TxHash = r.TxHash
+//	enc.ContractAddress = r.ContractAddress
+//	enc.GasUsed = hexutil.Uint64(r.GasUsed)
+//	enc.BlockHash = r.BlockHash
+//	enc.BlockNumber = (*hexutil.Big)(r.BlockNumber)
+//	enc.TransactionIndex = hexutil.Uint(r.TransactionIndex)
+//	return json.Marshal(&enc)
+//}
