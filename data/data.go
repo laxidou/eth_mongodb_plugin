@@ -82,33 +82,58 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) 
 	if err != nil {
 		fmt.Println(err)
 	}
-	//获取区块头信息
-	h := b.GetHeader()
-	blockInfo, err := getHeader(h)
-	//获取叔块
-	uncle := b.GetUncles()
-	uncles, totalUncle, err :=getUncleBlock(uncle)
 	//获取交易记录
 	txs := b.GetTransactions()
-	transactions, totalTxs, receipts, err:= getTransactions(txs)
-
+	reCh := make(chan *ReceiptInfo)
+	transactions, totalTxs, err:= m.getTransactions(txs, reCh)
+	var receiptsArr = make([]ReceiptInfo, 0)
+	i := 0
+	for  {
+		if totalTxs > i {
+			i++
+			receiptsArr = append(receiptsArr, *<- reCh)
+		}else {
+			close(reCh)
+			break
+		}
+		fmt.Println(i)
+	}
+	//获取区块头信息
+	h := b.GetHeader()
+	blockInfo, err := m.getHeader(h)
+	//获取叔块
+	uncle := b.GetUncles()
+	uncles, totalUncle, err := m.getUncleBlock(uncle)
 	////完善区块数据
 	blockInfo.TotalTxs = totalTxs
 	blockInfo.Transactions = *transactions
 	blockInfo.TotalUncles = totalUncle
 	blockInfo.Uncles = *uncles
-	ethCli, _ := newEthClient(m.ip)
-	var receiptsArr = make([]ReceiptInfo, 0)
-	for _, repHash := range *receipts{
-		receiptsInfo := ethCli.GetReceiptByTxHash(repHash)
-		receiptsArr = append(receiptsArr, *receiptsInfo)
-	}
 	blockInfo.Receipts = receiptsArr
 	return blockInfo, nil
 }
 
+//获取交易记录
+func (m *MobileClient)getTransactions(txs *geth.Transactions, re chan *ReceiptInfo) (txsInfo *[]TxData, totalTxs int, err error) {
+	fmt.Println("total transactions:",txs.Size())
+	totalTxs = txs.Size()
+	ethCli, _ := newEthClient(m.ip)
+	var transactions = make([]TxData, 0)
+	for i := 0; i < totalTxs; i++{
+		var txData TxData
+		tx, _ := txs.Get(i)
+		txRes, _ :=tx.EncodeJSON()
+		if err := json.Unmarshal([]byte(txRes), &txData); err != nil{
+			return nil, totalTxs,err
+		}
+		go ethCli.getReceipt(txData.Hash, re)
+		transactions = append(transactions, txData)
+	}
+	return &transactions, totalTxs,nil
+}
+
 //获取叔块
-func getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle int, err error) {
+func (m *MobileClient)getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle int, err error) {
 	totalNucle =uncle.Size()
 	var uncles =make([]UncleBlock, 0)
 	for i := 0; i < totalNucle; i++{
@@ -130,27 +155,8 @@ func getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle in
 	return &uncles, totalNucle, nil
 }
 
-//获取交易记录
-func getTransactions(txs *geth.Transactions) (txsInfo *[]TxData, totalTxs int, receiapts *[]string, err error) {
-	fmt.Println("total transactions:",txs.Size())
-	totalTxs = txs.Size()
-	var receiptArr []string
-	var transactions = make([]TxData, 0)
-	for i := 0; i < totalTxs; i++{
-		var txData TxData
-		tx, _ := txs.Get(i)
-		txRes, _ :=tx.EncodeJSON()
-		if err := json.Unmarshal([]byte(txRes), &txData); err != nil{
-			return nil, totalTxs, nil,err
-		}
-		fmt.Println(txData)
-		transactions = append(transactions, txData)
-		receiptArr = append(receiptArr, tx.GetHash().GetHex())
-	}
-	return &transactions, totalTxs, &receiptArr,nil
-}
-
-func getHeader(h *geth.Header) (block *BlockInfo, err error) {
+//获取区块头信息
+func (m *MobileClient)getHeader(h *geth.Header) (block *BlockInfo, err error) {
 	headerJson, _ := h.EncodeJSON()
 	//类型转换
 	var header map[string]interface{}
