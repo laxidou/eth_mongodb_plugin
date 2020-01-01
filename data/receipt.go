@@ -2,7 +2,9 @@ package data
 
 import (
 	"context"
+	"eth_mongodb_plugin/data/contract"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
@@ -65,7 +67,7 @@ type EthClient struct {
 }
 
 // NewEthereumClient connects a client to the given URL.
-func newEthClient(ethIp string) (c *EthClient, _ error) {
+func NewEthClient(ethIp string) (c *EthClient, _ error) {
 	client, err := ethclient.Dial(ethIp)
 	if err != nil {
 		log.Fatal(err)
@@ -76,6 +78,15 @@ func newEthClient(ethIp string) (c *EthClient, _ error) {
 func (c *EthClient)getReceipt(repHash string, re chan *ReceiptInfo) {
 	receiptsInfo := c.GetReceiptByTxHash(repHash)
 	re <- receiptsInfo
+}
+
+func (c * EthClient)GetContract() {
+	token,err := contract.NewToken(common.HexToAddress("0xdd974D5C2e2928deA5F71b9825b8b646686BD200"),c.cli)
+	if err != nil {
+		fmt.Println(err)
+	}
+	name, err := token.Name(&bind.CallOpts{})
+	fmt.Println(name)
 }
 
 //获取Logs

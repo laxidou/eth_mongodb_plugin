@@ -1,37 +1,44 @@
 package main
 
 import (
+	"context"
 	"eth_mongodb_plugin/config"
 	"eth_mongodb_plugin/data"
+	"eth_mongodb_plugin/mongodb"
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
-	"context"
 )
+
 
 func main() {
     v, err := config.Init()
     if err != nil {
-       panic(err)
+      panic(err)
     }
 	//ethIp := fmt.Sprintf("http://%s:%s",v.Get("ETH.host"),v.Get("ETH.port"))
 	ethIp := fmt.Sprintf("http://%s:%s",v.Get("localETH.host"),v.Get("localETH.port"))
-    mongoIp := fmt.Sprintf("mongodb://%s:%s",v.Get("database.mongodb.host"),v.Get("database.mongodb.port"))
+    mongoIp := fmt.Sprintf("mongodb://%s:%s",v.Get("database.labMongodb.host"),v.Get("database.labMongodb.port"))
 	fmt.Println(mongoIp)
-	mobileCli, _ := data.NewEthMobile(ethIp)
-	blockInfo, err := mobileCli.GetBlock(-1)
+    mong, err := mongodb.NewCollection(mongoIp,"eth")
+	mong.BlockIndex()
+    mong.LogIndex()
+    mong.ReceiptIndex()
 
-    //插入mongodb
-    ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-    client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoIp))
-    db := client.Database("ethT")
-	blocksDb := db.Collection("blocks")
-    ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-    res, err := blocksDb.InsertOne(ctx, &blockInfo)
-    if err != nil {
-    	fmt.Println(err)
+	mobileCli, _ := data.NewEthMobile(ethIp)
+
+	for {
+		blockInfo, receiptsArr, logsArr, err := mobileCli.GetBlock(-1)
+		ctx := context.Background()
+		res, err := mong.BlockSearch(ctx, blockInfo.Number)
+		if err != nil {
+			mong.BlockInsert(ctx, blockInfo)
+			mong.ReceiptsInsert(ctx, receiptsArr)
+			mong.LogsInsert(ctx, logsArr)
+			fmt.Println("插入第", blockInfo.Number)
+		}else {
+			fmt.Println("已是最新块")
+		}
+		fmt.Println(res)
+		time.NewTimer(time.Second * 2)
 	}
-    id := res.InsertedID
-    fmt.Println(id)
 }

@@ -2,10 +2,10 @@ package data
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/mobile"
 	"github.com/mitchellh/mapstructure"
-	"fmt"
 )
 
 type BlockInfo struct {
@@ -76,7 +76,7 @@ func NewEthMobile(ethIp string) (c *MobileClient, _ error) {
 }
 
 //获取区块信息
-func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) {
+func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, receiptsArr *[]interface{}, logsArr *[]interface{}, err error) {
 	ethCtx := geth.NewContext()
 	b, err := m.cli.GetBlockByNumber(ethCtx, blockNumber)
 	if err != nil {
@@ -86,17 +86,26 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) 
 	txs := b.GetTransactions()
 	reCh := make(chan *ReceiptInfo)
 	transactions, totalTxs, err:= m.getTransactions(txs, reCh)
-	var receiptsArr = make([]ReceiptInfo, 0)
+	var rA = make([]ReceiptInfo, 0)
+	var rAPointer = make([]interface{}, 0)
+	var logAPointer = make([]interface{}, 0)
 	i := 0
 	for  {
 		if totalTxs > i {
 			i++
-			receiptsArr = append(receiptsArr, *<- reCh)
+			receipt := *<- reCh
+			rA = append(rA, receipt)
+			rAPointer = append(rAPointer, &receipt)
+			if len(receipt.Logs) > 0 {
+				for _, log := range receipt.Logs {
+					logAPointer = append(logAPointer, &log)
+				}
+			}
 		}else {
 			close(reCh)
 			break
 		}
-		fmt.Println(i)
+		//fmt.Println(i)
 	}
 	//获取区块头信息
 	h := b.GetHeader()
@@ -109,20 +118,21 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, err error) 
 	blockInfo.Transactions = *transactions
 	blockInfo.TotalUncles = totalUncle
 	blockInfo.Uncles = *uncles
-	blockInfo.Receipts = receiptsArr
-	return blockInfo, nil
+	blockInfo.Receipts = rA
+	return blockInfo, &rAPointer, &logAPointer, nil
 }
 
 //获取交易记录
 func (m *MobileClient)getTransactions(txs *geth.Transactions, re chan *ReceiptInfo) (txsInfo *[]TxData, totalTxs int, err error) {
 	fmt.Println("total transactions:",txs.Size())
 	totalTxs = txs.Size()
-	ethCli, _ := newEthClient(m.ip)
+	ethCli, _ := NewEthClient(m.ip)
 	var transactions = make([]TxData, 0)
 	for i := 0; i < totalTxs; i++{
 		var txData TxData
 		tx, _ := txs.Get(i)
-		txRes, _ :=tx.EncodeJSON()
+		txRes, _ := tx.EncodeJSON()
+		//fmt.Println(txRes)
 		if err := json.Unmarshal([]byte(txRes), &txData); err != nil{
 			return nil, totalTxs,err
 		}
@@ -131,6 +141,12 @@ func (m *MobileClient)getTransactions(txs *geth.Transactions, re chan *ReceiptIn
 	}
 	return &transactions, totalTxs,nil
 }
+
+//获取交易from地址
+//func (c *EthClient)getTxFrom(block common.Hash, tx *geth.Transaction, index uint) {
+//	ctx := context.Context()
+//	c.cli.TransactionSender(ctx, tx, block, index)
+//}
 
 //获取叔块
 func (m *MobileClient)getUncleBlock(uncle *geth.Headers) (unclesInfo *[]UncleBlock, totalNucle int, err error) {
