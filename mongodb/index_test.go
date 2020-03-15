@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewCollection(t *testing.T) {
-	mong, err := NewCollection("192.168.1.100:27017","eth")
+	mong, err := NewCollection("mongodb://127.0.0.1:27017","ethT")
 	if err != nil {
 		fmt.Println(err)
 	}
