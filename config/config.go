@@ -1,16 +1,11 @@
 package config
 
 import (
-	"eth_mongodb_plugin/config/cmd"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
 )
-
-//type Config struct {
-//	config *viper.Viper
-//}
 
 type EmpConfig struct{
 	Start int8
@@ -80,8 +75,6 @@ func (e *EmpConfig)EmpSetting() {
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		panic(err)
-		//fmt.Println(err)
-		//os.Exit(-1)
 	}
 }
 
@@ -91,19 +84,6 @@ func init() {
 	RootCmd.Flags().StringVarP(&EmpApp.EthIp, "ethIp", "e","", "ethereum node ip")
 	RootCmd.Flags().StringVarP(&EmpApp.DatabaseName, "database", "d","", "mongodb database name")
 	RootCmd.Flags().StringVarP(&EmpApp.MongoDBIp, "mongodbIp", "m","", "mongodb ip")
-}
-
-func Init() (*viper.Viper, error) {
-	cmd.Execute()
-	v := viper.New()
-	v.AddConfigPath("./config")
-	v.SetConfigName("config")
-	v.SetConfigType("yaml")
-	// viper解析配置文件
-	if err := v.ReadInConfig(); err != nil {
-		return nil, err
-	}
-	return v, nil
 }
 
 
