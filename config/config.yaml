@@ -2,8 +2,14 @@ name: demo
 database:
   mongodb:
     db: eth
+    host: 127.0.0.1
+    port: !!str 27017
+    dbName: ethT
+  labMongodb:
+    db: eth
     host: 192.168.1.100
     port: !!str 27017
+    dbName: eth
 localETH:
   host: 192.168.1.100
   port: !!str 8080

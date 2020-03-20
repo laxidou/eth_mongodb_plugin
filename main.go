@@ -9,23 +9,20 @@ import (
 	"time"
 )
 
-
 func main() {
-    v, err := config.Init()
-    if err != nil {
-      panic(err)
-    }
-	//ethIp := fmt.Sprintf("http://%s:%s",v.Get("ETH.host"),v.Get("ETH.port"))
-	ethIp := fmt.Sprintf("http://%s:%s",v.Get("localETH.host"),v.Get("localETH.port"))
-    mongoIp := fmt.Sprintf("mongodb://%s:%s",v.Get("database.labMongodb.host"),v.Get("database.labMongodb.port"))
-	fmt.Println(mongoIp)
-    mong, err := mongodb.NewCollection(mongoIp,"eth")
-	mong.BlockIndex()
-    mong.LogIndex()
-    mong.ReceiptIndex()
+	config.Execute()
+	config.EmpApp.EmpSetting()
+	mong, err := mongodb.NewCollection(config.EmpApp.MongoDBIp,config.EmpApp.DatabaseName)
+	if err != nil {
+		panic(err)
+	}
+   	if config.EmpApp.CreateIndex == true{
+		mong.BlockIndex()
+		mong.LogIndex()
+		mong.ReceiptIndex()
+	}
 
-	mobileCli, _ := data.NewEthMobile(ethIp)
-
+	mobileCli, _ := data.NewEthMobile(config.EmpApp.EthIp)
 	for {
 		blockInfo, receiptsArr, logsArr, err := mobileCli.GetBlock(-1)
 		ctx := context.Background()
