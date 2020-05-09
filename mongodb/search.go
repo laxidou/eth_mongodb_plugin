@@ -14,3 +14,11 @@ func (a *AllCollection)BlockSearch(ctx context.Context, blockNumber int64) (bson
 	return blockInfo, nil
 }
 
+func (a *AllCollection)BlockStateSearch(ctx context.Context, blockNumber int64) (bson.Raw, error) {
+	res := a.blockState.FindOne(ctx, map[string]int64{"blockNumber": blockNumber})
+	StateInfo, err := res.DecodeBytes()
+	if err != nil {
+		return nil, err
+	}
+	return StateInfo, nil
+}

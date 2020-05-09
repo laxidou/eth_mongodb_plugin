@@ -9,9 +9,10 @@ import (
 )
 
 type AllCollection struct {
-	blocks *mongo.Collection
-	receipts *mongo.Collection
-	logs *mongo.Collection
+	blocks 		*mongo.Collection
+	receipts 	*mongo.Collection
+	logs 		*mongo.Collection
+	blockState 	*mongo.Collection
 }
 
 func NewCollection(mongoIp string, databaseName string) (a *AllCollection, _ error) {
@@ -24,7 +25,8 @@ func NewCollection(mongoIp string, databaseName string) (a *AllCollection, _ err
 	blocksCollection := db.Collection("blocks")
 	receiptsCollection := db.Collection("receipts")
 	logsCollection := db.Collection("logs")
-	return &AllCollection{blocksCollection,receiptsCollection,logsCollection}, nil
+	blockStateCollection := db.Collection("blockState")
+	return &AllCollection{blocksCollection,receiptsCollection,logsCollection, blockStateCollection}, nil
 }
 
 //block建立索引
@@ -56,6 +58,15 @@ func (a *AllCollection)LogIndex() ([]string,error) {
 		{Keys: map[string]int{"txhash": -1}},
 	}
 	index := a.logs.Indexes()
+	return createIndexs(&index, &newIndexs)
+}
+
+//BlockState建立索引
+func (a *AllCollection)BlockStateIndex() ([]string,error) {
+	newIndexs := []mongo.IndexModel{
+		{Keys: map[string]int{"blocknumber": -1}},
+	}
+	index := a.blockState.Indexes()
 	return createIndexs(&index, &newIndexs)
 }
 

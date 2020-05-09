@@ -57,7 +57,7 @@ func (e *EmpConfig)EmpSetting() {
 		os.Exit(-1)
 	}
 	if e.EthIp == "" {
-		e.EthIp = fmt.Sprintf("http://%s:%s",v.Get("ETH.host"),v.Get("ETH.port"))
+		e.EthIp = fmt.Sprintf("http://%s:%s",v.Get("localETH.host"),v.Get("localETH.port"))
 		fmt.Println(e.EthIp)
 	}
 	if e.DatabaseName == "" {
@@ -65,7 +65,7 @@ func (e *EmpConfig)EmpSetting() {
 		fmt.Println(e.DatabaseName)
 	}
 	if e.MongoDBIp == "" {
-		e.MongoDBIp = fmt.Sprintf("mongodb://%s:%s",v.Get("database.mongodb.host"),v.Get("database.mongodb.port"))
+		e.MongoDBIp = fmt.Sprintf("mongodb://%s:%s",v.Get("database.labMongodb.host"),v.Get("database.labMongodb.port"))
 		fmt.Println(e.MongoDBIp)
 	}
 }
