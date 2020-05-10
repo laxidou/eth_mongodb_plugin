@@ -40,18 +40,23 @@ func main() {
 			go insertBlock(ctx, mong, mobileCli, getNumber)
 		}
 	}()
-	reversePull(mong, mobileCli, blockNumber)
+	for{
+		blockInfo, _, _, _ := mobileCli.GetBlock(-1)
+		reversePull(mong, mobileCli, blockInfo.Number - 8)
+	}
+	//reversePull(mong, mobileCli, blockNumber)
 }
 
 func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) {
 	ctx := context.Background()
 	insertRes := insertBlock(ctx, mong, mobileCli, blockNumber - 8)
+
 	time.Sleep(time.Second)
 	if !insertRes {
 		fmt.Println("已插入最新块", blockNumber)
 	}
-	blockInfo, _, _, _ := mobileCli.GetBlock(-1)
-	reversePull(mong, mobileCli, blockInfo.Number - 8)
+	//blockInfo, _, _, _ := mobileCli.GetBlock(-1)
+	//reversePull(mong, mobileCli, blockInfo.Number - 8)
 }
 
 func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) bool {
