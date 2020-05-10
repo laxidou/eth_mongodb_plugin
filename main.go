@@ -26,34 +26,32 @@ func main() {
 	}
 
 	mobileCli, _ := data.NewEthMobile(config.EmpApp.EthIp)
+	//获取最新区块号
 	blockInfo, _, _, _ := mobileCli.GetBlock(-1)
-	blocks := make(chan int64, 10)
+	//从不可逆区块开始拉取
 	blockNumber := blockInfo.Number - 8
+	blocks := make(chan int64, 10)
 	ctx := context.Background()
-	go checkBlock(mong, blockNumber, blocks)
+	go checkBlock(mong, blockNumber - 1, blocks)
 	go func() {
 		for {
 			getNumber := <- blocks
+			fmt.Println("chennel拉块:",getNumber)
 			go insertBlock(ctx, mong, mobileCli, getNumber)
 		}
 	}()
-	reversePull(mong, mobileCli, blockNumber, true)
+	reversePull(mong, mobileCli, blockNumber)
 }
 
-func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64, startFlag bool) {
-	var insertRes bool
+func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) {
 	ctx := context.Background()
-	if startFlag == true {
-		insertRes = insertBlock(ctx, mong, mobileCli, blockNumber)
-	}else{
-		insertRes = insertBlock(ctx, mong, mobileCli, blockNumber - 8)
-	}
-	if insertRes {
+	insertRes := insertBlock(ctx, mong, mobileCli, blockNumber - 8)
+	time.Sleep(time.Second)
+	if !insertRes {
 		fmt.Println("已插入最新块", blockNumber)
 	}
 	blockInfo, _, _, _ := mobileCli.GetBlock(-1)
-	time.Sleep(time.Second)
-	reversePull(mong, mobileCli, blockInfo.Number, false)
+	reversePull(mong, mobileCli, blockInfo.Number - 8)
 }
 
 func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) bool {
@@ -63,11 +61,11 @@ func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *da
 	bson.Unmarshal(res, &info)
 	if err != nil {
 		mong.BlockStateInsert(ctx, blockNumber)
-		mong.BlockStateUpdate(ctx, blockNumber, 1)
+		//mong.BlockStateUpdate(ctx, blockNumber, 1)
 	}else if info.BlockState == 0 {
-		mong.BlockStateUpdate(ctx, blockNumber, 1)
+		//mong.BlockStateUpdate(ctx, blockNumber, 1)
 	}else if info.BlockState == 1 {
-		mong.DeleteBlock(ctx, blockNumber)
+		//mong.DeleteBlock(ctx, blockNumber)
 	}else if info.BlockState == 2 {
 		return false
 	}
@@ -75,7 +73,6 @@ func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *da
 	mong.ReceiptsInsert(ctx, receiptsArr)
 	mong.LogsInsert(ctx, logsArr)
 	fmt.Println("插入第", blockNumber)
-	fmt.Println(res)
 	mong.BlockStateUpdate(ctx, blockNumber, 2)
 	return true
 }
@@ -83,6 +80,7 @@ func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *da
 func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int64){
 	for {
 		ctx := context.Background()
+		fmt.Println("channel:",len(blocks))
 		if blockNumber == 0 {
 			close(blocks)
 		} else {

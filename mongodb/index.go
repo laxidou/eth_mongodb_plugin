@@ -31,9 +31,12 @@ func NewCollection(mongoIp string, databaseName string) (a *AllCollection, _ err
 
 //block建立索引
 func (a *AllCollection)BlockIndex() ([]string,error) {
+	opt := options.IndexOptions{}
+	opt.SetUnique(true)
 	newIndexs := []mongo.IndexModel{
 		{Keys: map[string]int{"number": 1}},
 		{Keys: map[string]int{"hash": 1}},
+		{Options: &opt},
 	}
 	index := a.blocks.Indexes()
 	return createIndexs(&index, &newIndexs)
@@ -41,9 +44,12 @@ func (a *AllCollection)BlockIndex() ([]string,error) {
 
 //receipt建立索引
 func (a *AllCollection)ReceiptIndex() ([]string,error) {
+	opt := options.IndexOptions{}
+	opt.SetUnique(true)
 	newIndexs := []mongo.IndexModel{
 		{Keys: map[string]int{"txhash": -1}},
 		{Keys: map[string]int{"blocknumber": -1}},
+		{Options: &opt},
 	}
 	index := a.blocks.Indexes()
 	return createIndexs(&index, &newIndexs)
@@ -51,11 +57,14 @@ func (a *AllCollection)ReceiptIndex() ([]string,error) {
 
 //logs建立索引
 func (a *AllCollection)LogIndex() ([]string,error) {
+	opt := options.IndexOptions{}
+	opt.SetUnique(true)
 	newIndexs := []mongo.IndexModel{
 		{Keys: map[string]int{"address": -1}},
 		{Keys: map[string]int{"blocknumber": -1}},
 		{Keys: map[string]int{"blockhash": -1}},
 		{Keys: map[string]int{"txhash": -1}},
+		{Options: &opt},
 	}
 	index := a.logs.Indexes()
 	return createIndexs(&index, &newIndexs)
@@ -63,8 +72,11 @@ func (a *AllCollection)LogIndex() ([]string,error) {
 
 //BlockState建立索引
 func (a *AllCollection)BlockStateIndex() ([]string,error) {
+	opt := options.IndexOptions{}
+	opt.SetUnique(true)
 	newIndexs := []mongo.IndexModel{
 		{Keys: map[string]int{"blocknumber": -1}},
+		{Options: &opt},
 	}
 	index := a.blockState.Indexes()
 	return createIndexs(&index, &newIndexs)
