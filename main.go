@@ -85,7 +85,7 @@ func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *da
 func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int64){
 	for {
 		ctx := context.Background()
-		fmt.Println("channel:",len(blocks))
+		//fmt.Println("channel:",len(blocks))
 		if blockNumber == 0 {
 			close(blocks)
 		} else {
