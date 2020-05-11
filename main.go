@@ -30,21 +30,27 @@ func main() {
 	blockInfo, _, _, _ := mobileCli.GetBlock(-1)
 	//从不可逆区块开始拉取
 	blockNumber := blockInfo.Number - 8
-	blocks := make(chan int64, 10)
+	blocks := make(chan int64, 100)
 	ctx := context.Background()
 	go checkBlock(mong, blockNumber - 1, blocks)
-	go func() {
-		for {
-			pullFromChannel(ctx, mong, mobileCli, blockNumber, blocks)
-		}
-	}()
+	go pullFromChannel(ctx, mong, mobileCli, blocks)
+
 	reversePull(mong, mobileCli, blockNumber)
 }
 
-func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64, blocks chan int64) {
-	getNumber := <- blocks
-	//fmt.Println("chennel拉块:",getNumber)
-	insertBlock(ctx, mong, mobileCli, getNumber)
+func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blocks chan int64) {
+	for{
+		getNumber, ok := <- blocks
+		if ok {
+			insertBlock(ctx, mong, mobileCli, getNumber)
+		}
+	}
+
+	//if len(blocks) > 0 {
+	//	getNumber := <- blocks
+	//	//fmt.Println("chennel拉块:",getNumber)
+	//	insertBlock(ctx, mong, mobileCli, getNumber)
+	//}
 }
 
 func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) {
@@ -85,11 +91,11 @@ func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *da
 func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int64){
 	for {
 		ctx := context.Background()
-		//fmt.Println("channel:",len(blocks))
+		fmt.Println("channel:",len(blocks))
 		if blockNumber == 0 {
 			close(blocks)
 		} else {
-			if len(blocks) < 10 {
+			if len(blocks) < 100 {
 				res, err := mong.BlockStateSearch(ctx, blockNumber)
 				if err != nil {
 					mong.BlockStateInsert(ctx, blockNumber)
