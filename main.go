@@ -43,7 +43,7 @@ func main() {
 
 func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64, blocks chan int64) {
 	getNumber := <- blocks
-	fmt.Println("chennel拉块:",getNumber)
+	//fmt.Println("chennel拉块:",getNumber)
 	insertBlock(ctx, mong, mobileCli, getNumber)
 }
 
