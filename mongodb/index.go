@@ -34,9 +34,8 @@ func (a *AllCollection)BlockIndex() ([]string,error) {
 	opt := options.IndexOptions{}
 	opt.SetUnique(true)
 	newIndexs := []mongo.IndexModel{
-		{Keys: map[string]int{"number": 1}},
-		{Keys: map[string]int{"hash": 1}},
-		{Options: &opt},
+		{Keys: map[string]int{"number": 1}, Options: &opt},
+		{Keys: map[string]int{"hash": 1}, Options: &opt},
 	}
 	index := a.blocks.Indexes()
 	return createIndexs(&index, &newIndexs)

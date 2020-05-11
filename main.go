@@ -44,22 +44,15 @@ func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli
 		if ok {
 			res := insertBlock(ctx, mong, mobileCli, getNumber)
 			if res {
-				fmt.Println("插入区块",getNumber,"成功")
+				fmt.Println("chennel拉块:",getNumber)
 			}
 		}
 	}
-
-	//if len(blocks) > 0 {
-	//	getNumber := <- blocks
-	//	//fmt.Println("chennel拉块:",getNumber)
-	//	insertBlock(ctx, mong, mobileCli, getNumber)
-	//}
 }
 
 func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) {
 	ctx := context.Background()
-	insertRes := insertBlock(ctx, mong, mobileCli, blockNumber - 8)
-
+	insertRes := insertBlock(ctx, mong, mobileCli, blockNumber)
 	time.Sleep(time.Second)
 	if !insertRes {
 		fmt.Println("已插入最新块", blockNumber)
