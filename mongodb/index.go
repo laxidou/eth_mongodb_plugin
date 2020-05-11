@@ -47,9 +47,8 @@ func (a *AllCollection)ReceiptIndex() ([]string,error) {
 	opt := options.IndexOptions{}
 	opt.SetUnique(true)
 	newIndexs := []mongo.IndexModel{
-		{Keys: map[string]int{"txhash": -1}},
-		{Keys: map[string]int{"blocknumber": -1}},
-		{Options: &opt},
+		{Keys: map[string]int{"txhash": -1}, Options: &opt},
+		{Keys: map[string]int{"blocknumber": -1}, Options: &opt},
 	}
 	index := a.blocks.Indexes()
 	return createIndexs(&index, &newIndexs)
@@ -63,8 +62,7 @@ func (a *AllCollection)LogIndex() ([]string,error) {
 		{Keys: map[string]int{"address": -1}},
 		{Keys: map[string]int{"blocknumber": -1}},
 		{Keys: map[string]int{"blockhash": -1}},
-		{Keys: map[string]int{"txhash": -1}},
-		{Options: &opt},
+		{Keys: map[string]int{"txhash": -1}, Options: &opt},
 	}
 	index := a.logs.Indexes()
 	return createIndexs(&index, &newIndexs)
@@ -75,8 +73,7 @@ func (a *AllCollection)BlockStateIndex() ([]string,error) {
 	opt := options.IndexOptions{}
 	opt.SetUnique(true)
 	newIndexs := []mongo.IndexModel{
-		{Keys: map[string]int{"blocknumber": -1}},
-		{Options: &opt},
+		{Keys: map[string]int{"blocknumber": -1}, Options: &opt},
 	}
 	index := a.blockState.Indexes()
 	return createIndexs(&index, &newIndexs)
