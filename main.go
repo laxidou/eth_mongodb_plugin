@@ -42,7 +42,10 @@ func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli
 	for{
 		getNumber, ok := <- blocks
 		if ok {
-			insertBlock(ctx, mong, mobileCli, getNumber)
+			res := insertBlock(ctx, mong, mobileCli, getNumber)
+			if res {
+				fmt.Println("插入区块",getNumber,"成功")
+			}
 		}
 	}
 
@@ -94,9 +97,12 @@ func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *da
 func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int64){
 	for {
 		ctx := context.Background()
-		fmt.Println("channel:",len(blocks))
+		if len(blocks) < 100 {
+			fmt.Println("channel:",len(blocks))
+		}
 		if blockNumber == 0 {
 			close(blocks)
+			break
 		} else {
 			if len(blocks) < 100 {
 				res, err := mong.BlockStateSearch(ctx, blockNumber)
