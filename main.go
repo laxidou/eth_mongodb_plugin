@@ -67,6 +67,9 @@ func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, bloc
 
 func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) bool {
 	blockInfo, receiptsArr, logsArr, err := mobileCli.GetBlock(blockNumber)
+	if err != nil {
+		return false
+	}
 	res, err := mong.BlockStateSearch(ctx, blockNumber)
 	info := mongodb.BlockState{}
 	bson.Unmarshal(res, &info)
