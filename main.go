@@ -35,16 +35,16 @@ func main() {
 	go checkBlock(mong, blockNumber - 1, blocks)
 	go func() {
 		for {
-			getNumber := <- blocks
-			fmt.Println("chennel拉块:",getNumber)
-			go insertBlock(ctx, mong, mobileCli, getNumber)
+			pullFromChannel(ctx, mong, mobileCli, blockNumber, blocks)
 		}
 	}()
-	for{
-		blockInfo, _, _, _ := mobileCli.GetBlock(-1)
-		reversePull(mong, mobileCli, blockInfo.Number - 8)
-	}
-	//reversePull(mong, mobileCli, blockNumber)
+	reversePull(mong, mobileCli, blockNumber)
+}
+
+func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64, blocks chan int64) {
+	getNumber := <- blocks
+	fmt.Println("chennel拉块:",getNumber)
+	insertBlock(ctx, mong, mobileCli, getNumber)
 }
 
 func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) {
@@ -55,8 +55,8 @@ func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, bloc
 	if !insertRes {
 		fmt.Println("已插入最新块", blockNumber)
 	}
-	//blockInfo, _, _, _ := mobileCli.GetBlock(-1)
-	//reversePull(mong, mobileCli, blockInfo.Number - 8)
+	blockInfo, _, _, _ := mobileCli.GetBlock(-1)
+	reversePull(mong, mobileCli, blockInfo.Number - 8)
 }
 
 func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *data.MobileClient, blockNumber int64) bool {
