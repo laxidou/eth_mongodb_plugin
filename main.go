@@ -45,6 +45,8 @@ func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli
 			res := insertBlock(ctx, mong, mobileCli, getNumber)
 			if res {
 				fmt.Println("chennel拉块:",getNumber)
+			} else {
+				fmt.Println("warning:", getNumber)
 			}
 		}
 	}
@@ -105,6 +107,7 @@ func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int6
 					info := mongodb.BlockState{}
 					bson.Unmarshal(res, &info)
 					if info.BlockState == 2 {
+						fmt.Println("channel该块已插入:", blockNumber)
 						blockNumber--
 						continue
 					} else if info.BlockState == 1 {
@@ -118,8 +121,8 @@ func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int6
 					}
 				}
 				blocks <- blockNumber
+				blockNumber--
 			}
 		}
-		blockNumber--
 	}
 }
