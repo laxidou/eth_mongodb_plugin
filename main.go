@@ -99,7 +99,7 @@ func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int6
 					} else if info.BlockState == 1 {
 						deleteRes, deleteErr := mong.DeleteBlock(ctx, blockNumber)
 						if deleteErr != nil {
-							fmt.Println("删除脏数据错误", deleteRes)
+							fmt.Println("删除脏数据错误:", deleteErr)
 						} else {
 							fmt.Println("删除脏数据", deleteRes)
 						}
