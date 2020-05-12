@@ -2,12 +2,13 @@ package mongodb
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (a *AllCollection)BlockStateUpdate(ctx context.Context,blockNumber int64, state int) (interface{}, error) {
-	res, err := a.blockState.UpdateOne(ctx, map[string]int64{"blocknumber": blockNumber}, map[string]int{"blockstate": state})
+func (a *AllCollection)BlockStateUpdate(ctx context.Context,blockNumber int64, state int) (int64, error) {
+	res, err := a.blockState.UpdateOne(ctx, &BlockState{BlockNumber:blockNumber}, bson.M{"$set": bson.M{"blockstate": state}})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return res, nil
+	return res.ModifiedCount, nil
 }
