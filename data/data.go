@@ -81,11 +81,16 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, receiptsArr
 	b, err := m.cli.GetBlockByNumber(ethCtx, blockNumber)
 	if err != nil {
 		fmt.Println(err)
+		return nil, nil, nil, err
 	}
 	//获取交易记录
 	txs := b.GetTransactions()
 	reCh := make(chan *ReceiptInfo)
 	transactions, totalTxs, err:= m.getTransactions(txs, reCh)
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil, nil, err
+	}
 	var rA = make([]ReceiptInfo, 0)
 	var rAPointer = make([]interface{}, 0)
 	var logAPointer = make([]interface{}, 0)
@@ -110,9 +115,17 @@ func (m *MobileClient)GetBlock(blockNumber int64) (block *BlockInfo, receiptsArr
 	//获取区块头信息
 	h := b.GetHeader()
 	blockInfo, err := m.getHeader(h)
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil, nil, err
+	}
 	//获取叔块
 	uncle := b.GetUncles()
 	uncles, totalUncle, err := m.getUncleBlock(uncle)
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil, nil, err
+	}
 	////完善区块数据
 	blockInfo.TotalTxs = totalTxs
 	blockInfo.Transactions = *transactions
