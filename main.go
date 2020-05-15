@@ -52,9 +52,9 @@ func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli
 			res := insertBlock(ctx, mong, mobileCli, getNumber)
 			fmt.Println(res)
 			if res {
-				logger.Infof("Channel--Insert new block from channel: %s", getNumber)
+				logger.Infof("Channel--Insert new block from channel: %d", getNumber)
 			} else {
-				logger.Infof("Channel--Have inserted this block: %s", getNumber)
+				logger.Infof("Channel--Have inserted this block: %d", getNumber)
 			}
 		}
 	}
@@ -66,9 +66,9 @@ func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, bloc
 	time.Sleep(time.Second)
 	fmt.Println(blockNumber)
 	if !insertRes {
-		logger.Infof("Have inserted this latest block: %s", blockNumber)
+		logger.Infof("Have inserted this latest block: %d", blockNumber)
 	}else {
-		logger.Infof("Insert new block: %s", blockNumber)
+		logger.Infof("Insert new block: %d", blockNumber)
 	}
 	blockInfo, _, _, _ := mobileCli.GetBlock(-1)
 	reversePull(mong, mobileCli, blockInfo.Number - 8)
@@ -113,12 +113,12 @@ func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int6
 				res, err := mong.BlockStateSearch(ctx, blockNumber)
 				if err != nil {
 					mong.BlockStateInsert(ctx, blockNumber)
-					logger.Infof("check--Create new block state: %s", blockNumber)
+					logger.Infof("check--Create new block state: %d", blockNumber)
 				} else {
 					info := mongodb.BlockState{}
 					bson.Unmarshal(res, &info)
 					if info.BlockState == 2 {
-						logger.Infof("check--Have inserted this block: %s", blockNumber)
+						logger.Infof("check--Have inserted this block: %d", blockNumber)
 						blockNumber--
 						continue
 					} else if info.BlockState == 1 {
