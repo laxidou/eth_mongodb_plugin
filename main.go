@@ -4,18 +4,25 @@ import (
 	"context"
 	"eth_mongodb_plugin/config"
 	"eth_mongodb_plugin/data"
+	"eth_mongodb_plugin/log"
 	"eth_mongodb_plugin/mongodb"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.uber.org/zap"
 	"time"
 )
 
+var logger *zap.SugaredLogger
+
 
 func main() {
+	logger = log.InitLogger()
+	defer logger.Sync()
 	config.Execute()
 	config.EmpApp.EmpSetting()
 	mong, err := mongodb.NewCollection(config.EmpApp.MongoDBIp,config.EmpApp.DatabaseName)
 	if err != nil {
+		logger.Errorf("mongodb connect error: %s", err	)
 		panic(err)
 	}
    	if config.EmpApp.CreateIndex == true {
@@ -43,10 +50,11 @@ func pullFromChannel(ctx context.Context, mong *mongodb.AllCollection, mobileCli
 		getNumber, ok := <- blocks
 		if ok {
 			res := insertBlock(ctx, mong, mobileCli, getNumber)
+			fmt.Println(res)
 			if res {
-				fmt.Println("chennel拉块:",getNumber)
+				logger.Infof("Channel--Insert new block from channel: %s", getNumber)
 			} else {
-				fmt.Println("warning:", getNumber)
+				logger.Infof("Channel--Have inserted this block: %s", getNumber)
 			}
 		}
 	}
@@ -56,8 +64,11 @@ func reversePull(mong *mongodb.AllCollection, mobileCli *data.MobileClient, bloc
 	ctx := context.Background()
 	insertRes := insertBlock(ctx, mong, mobileCli, blockNumber)
 	time.Sleep(time.Second)
+	fmt.Println(blockNumber)
 	if !insertRes {
-		fmt.Println("已插入最新块", blockNumber)
+		logger.Infof("Have inserted this latest block: %s", blockNumber)
+	}else {
+		logger.Infof("Insert new block: %s", blockNumber)
 	}
 	blockInfo, _, _, _ := mobileCli.GetBlock(-1)
 	reversePull(mong, mobileCli, blockInfo.Number - 8)
@@ -84,7 +95,6 @@ func insertBlock(ctx context.Context, mong *mongodb.AllCollection, mobileCli *da
 	mong.BlockInsert(ctx, blockInfo)
 	mong.ReceiptsInsert(ctx, receiptsArr)
 	mong.LogsInsert(ctx, logsArr)
-	fmt.Println("插入第", blockNumber)
 	mong.BlockStateUpdate(ctx, blockNumber, 2)
 	return true
 }
@@ -103,19 +113,20 @@ func checkBlock(mong *mongodb.AllCollection, blockNumber int64, blocks chan int6
 				res, err := mong.BlockStateSearch(ctx, blockNumber)
 				if err != nil {
 					mong.BlockStateInsert(ctx, blockNumber)
+					logger.Infof("check--Create new block state: %s", blockNumber)
 				} else {
 					info := mongodb.BlockState{}
 					bson.Unmarshal(res, &info)
 					if info.BlockState == 2 {
-						fmt.Println("channel该块已插入:", blockNumber)
+						logger.Infof("check--Have inserted this block: %s", blockNumber)
 						blockNumber--
 						continue
 					} else if info.BlockState == 1 {
 						deleteRes, deleteErr := mong.DeleteBlock(ctx, blockNumber)
 						if deleteErr != nil {
-							fmt.Println("删除脏数据错误:", deleteErr)
+							logger.Errorf("check--Delete dirty data: %s", deleteErr)
 						} else {
-							fmt.Println("删除脏数据", deleteRes)
+							logger.Infof("check--Delete dirty data: %s", deleteRes)
 						}
 						mong.BlockStateUpdate(ctx, blockNumber, 0)
 					}
